@@ -5,7 +5,7 @@ import { CONTRACT_ADDRESS } from '../config'
 import { abi } from '../contracts/VotingSystem'
 
 interface CreatePollProps {
-  onPollCreated: (pollId: number) => void
+  onPollCreated: (pollId: number, pollCode: string) => void
 }
 
 export default function CreatePoll({ onPollCreated }: CreatePollProps) {
@@ -68,27 +68,41 @@ export default function CreatePoll({ onPollCreated }: CreatePollProps) {
     }
 
     try {
-      for (const log of receipt.logs) {
+      // Find the PollCreated event in the logs
+      const pollCreatedEvent = receipt.logs.find(log => {
         try {
-          const event = decodeEventLog({
+          const decoded = decodeEventLog({
             abi,
             data: log.data,
             topics: log.topics,
           })
-
-          if (event.eventName === 'PollCreated') {
-            const pollId = Number(event.args.pollId)
-            onPollCreated(pollId)
-            return
-          }
+          return decoded.eventName === 'PollCreated'
         } catch (e) {
-          console.log('Failed to decode log:', e)
-          continue
+          return false
         }
+      })
+
+      if (!pollCreatedEvent) {
+        setError('Poll creation succeeded but event was not found. Please check your recent polls.')
+        setIsSubmitting(false)
+        return
       }
-      // If we get here, we didn't find the PollCreated event
-      setError('Poll creation succeeded but event was not found. Please check your recent polls.')
-      setIsSubmitting(false)
+
+      const decodedEvent = decodeEventLog({
+        abi,
+        data: pollCreatedEvent.data,
+        topics: pollCreatedEvent.topics,
+      })
+
+      const pollId = Number(decodedEvent.args.pollId)
+      if (isNaN(pollId)) {
+        setError('Failed to get poll ID from event. Please check your recent polls.')
+        setIsSubmitting(false)
+        return
+      }
+
+      const pollCode = pollId.toString(36).toUpperCase().padStart(6, '0')
+      onPollCreated(pollId, pollCode)
     } catch (err) {
       console.error('Error processing receipt:', err)
       setError('Error processing transaction receipt. Please check your recent polls.')

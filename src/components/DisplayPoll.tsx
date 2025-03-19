@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useReadContract, useWriteContract, useWatchContractEvent, useAccount, useReadContracts } from 'wagmi'
+import { useReadContract, useWriteContract, useWatchContractEvent, useAccount, useReadContracts, useWaitForTransactionReceipt } from 'wagmi'
 import { CONTRACT_ADDRESS } from '../config'
 import { abi } from '../contracts/VotingSystem'
 
@@ -55,10 +55,27 @@ export default function DisplayPoll({ pollId, pollCode }: DisplayPollProps) {
     writeContract, 
     error: writeError,
     isPending,
-    status
+    status,
+    data: voteHash
   } = useWriteContract()
 
-  const isConfirming = status === 'pending'
+  const { 
+    data: voteReceipt,
+    isLoading: isVoteConfirming
+  } = useWaitForTransactionReceipt({
+    hash: voteHash,
+    onSuccess: () => {
+      // Force a refresh of vote counts and hasVoted status
+      if (voteReceipt?.status === 'success') {
+        // Refetch vote counts
+        refetchVoteCounts()
+        // Refetch hasVoted status
+        refetchHasVoted()
+      }
+    }
+  })
+
+  const isConfirming = status === 'pending' || isVoteConfirming
 
   // Watch for vote events
   useWatchContractEvent({
@@ -67,7 +84,27 @@ export default function DisplayPoll({ pollId, pollCode }: DisplayPollProps) {
     eventName: 'Voted',
     onLogs: () => {
       console.log('Vote event detected')
+      // Force a refresh of vote counts and hasVoted status
+      refetchVoteCounts()
+      refetchHasVoted()
     },
+  })
+
+  // Add refetch functions
+  const { refetch: refetchVoteCounts } = useReadContracts({
+    contracts: pollDetails?.options.map((_, index) => ({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: 'getVoteCount' as const,
+      args: [BigInt(pollId), BigInt(index)] as const,
+    })) || [],
+  })
+
+  const { refetch: refetchHasVoted } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi,
+    functionName: 'hasVoted',
+    args: [BigInt(pollId), address as `0x${string}`],
   })
 
   // Update poll details when data changes

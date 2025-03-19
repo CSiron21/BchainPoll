@@ -11,11 +11,11 @@ import DisplayPoll from './components/DisplayPoll'
 
 // Define Ganache chain
 const ganacheChain = {
-  id: 1337,
-  name: 'Ganache',
+  id: 31337,
+  name: 'Hardhat',
   rpcUrls: {
-    default: { http: ['http://127.0.0.1:7545'] },
-    public: { http: ['http://127.0.0.1:7545'] },
+    default: { http: ['http://127.0.0.1:8545'] },
+    public: { http: ['http://127.0.0.1:8545'] },
   },
   nativeCurrency: {
     decimals: 18,
@@ -83,12 +83,8 @@ function MainContent() {
     setActiveView('create')
   }
 
-  const handleJoinPoll = (pollId: number) => {
-    console.log('Joining poll:', pollId)
+  const handlePollCreated = (pollId: number, pollCode: string) => {
     setActivePollId(pollId)
-    // Convert poll ID to a 6-character code
-    const pollCode = pollId.toString(36).toUpperCase().padStart(6, '0')
-    console.log('Poll code:', pollCode)
     setActivePollCode(pollCode)
     setActiveView('poll')
   }
@@ -133,11 +129,11 @@ function MainContent() {
         {activeView === 'home' && (
           <HomePage
             onCreatePoll={handleCreatePoll}
-            onJoinPoll={handleJoinPoll}
+            onJoinPoll={handlePollCreated}
           />
         )}
         {activeView === 'create' && (
-          <CreatePoll onPollCreated={handleJoinPoll} />
+          <CreatePoll onPollCreated={handlePollCreated} />
         )}
         {activeView === 'poll' && activePollId !== null && activePollCode !== null && (
           <DisplayPoll pollId={activePollId} pollCode={activePollCode} />

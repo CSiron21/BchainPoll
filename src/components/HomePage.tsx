@@ -5,7 +5,7 @@ import { abi } from '../contracts/VotingSystem'
 
 interface HomePageProps {
   onCreatePoll: () => void
-  onJoinPoll: (pollId: number) => void
+  onJoinPoll: (pollId: number, pollCode: string) => void
 }
 
 const HomePage: React.FC<HomePageProps> = ({ onCreatePoll, onJoinPoll }) => {
@@ -48,7 +48,7 @@ const HomePage: React.FC<HomePageProps> = ({ onCreatePoll, onJoinPoll }) => {
       return
     }
 
-    onJoinPoll(pollId)
+    onJoinPoll(pollId, pollCode)
   }
 
   if (!isConnected) {
